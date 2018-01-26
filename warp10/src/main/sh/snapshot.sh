@@ -23,16 +23,14 @@ if [ "$#" -eq 1 ]; then
   # default
   WARP10_HOME=/opt/warp10-@VERSION@
   LEVELDB_HOME=${WARP10_HOME}/leveldb
-  PID_FILE=${WARP10_HOME}/logs/warp10.pid
 elif [ "$#" -eq 4 ]; then
   # Name of snapshot
   SNAPSHOT=$1
   # default
   WARP10_HOME=$2
   LEVELDB_HOME=$3
-  PID_FILE=$4
 else
-  echo "Usage: $0 'snapshot-name' ['{WARP10_HOME}' '{LEVELDB_HOME}' '{PID_FILE}']"
+  echo "Usage: $0 'snapshot-name' ['{WARP10_HOME}' '{LEVELDB_HOME}']"
   exit 1
 fi
 
@@ -53,16 +51,6 @@ fi
 
 if [ -z "$JAVA_HOME" ]; then
   echo "JAVA_HOME not set";
-  exit 1
-fi
-
-#
-# Check if Warp instance is currently running
-#
-
-if [ ! -e ${PID_FILE} ] || [ "`${JAVA_HOME}/bin/jps -lm|grep -wE $(cat ${PID_FILE})|cut -f 1 -d' '`" = "" ]
-then
-  echo "No Warp 10 instance is currently running !"
   exit 1
 fi
 

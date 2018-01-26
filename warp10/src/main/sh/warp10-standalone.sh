@@ -75,7 +75,7 @@ IS_JAVA7=false
 #
 # Classpath
 #
-WARP10_REVISION=@VERSION@
+WARP10_REVISION=${WARP10_VERSION}
 WARP10_USER=warp10
 WARP10_GROUP=warp10
 WARP10_CONFIG=${WARP10_HOME}/etc/conf-standalone.conf
@@ -86,8 +86,8 @@ WARP10_INIT=io.warp10.standalone.WarpInit
 # The lib directory is dedicated to user libraries except of UDF(jars directory): extensions;..
 #
 WARP10_CP=${WARP10_HOME}/etc:${WARP10_JAR}:${WARP10_HOME}/lib/*
-WARP10_HEAP=1g
-WARP10_HEAP_MAX=1g
+WARP10_HEAP=${WARP10_HEAP:-1g}
+WARP10_HEAP_MAX=${WARP10_HEAP_MAX:-1g}
 INITCONFIG=false
 
 LEVELDB_HOME=${WARP10_DATA_DIR}/leveldb
@@ -170,7 +170,7 @@ bootstrap() {
   chmod 755 ${WARP10_HOME}/bin/*.sh
   chmod 755 ${WARP10_HOME}/bin/*.init
   chmod 644 ${WARP10_HOME}/bin/*.service
-  chmod 644 ${WARP10_HOME}/bin/warp10-@VERSION@.jar
+  chmod 644 ${WARP10_HOME}/bin/warp10-${WARP10_VERSION}.jar
   chmod -R 755 ${WARP10_HOME}/datalog
   chmod -R 755 ${WARP10_HOME}/datalog_done
   chmod -R 755 ${WARP10_HOME}/leveldb
@@ -379,11 +379,6 @@ start() {
     mv ${JAVA_HEAP_DUMP} ${JAVA_HEAP_DUMP}-`date +%s`
   fi
 
-  if [ -e ${PID_FILE} ] && [ "`${JAVA_HOME}/bin/jps -lm|grep -wE $(cat ${PID_FILE})|cut -f 1 -d' '`" != "" ]; then
-    echo "Start failed! - A Warp 10 instance is currently running"
-    exit 1
-  fi
-
   #
   # Config file exists ?
   #
@@ -442,15 +437,6 @@ start() {
   #
   # Start Warp10 instance..
   #
-  ${JAVA_HOME}/bin/java ${JAVA_OPTS} -cp ${WARP10_CP} ${WARP10_CLASS} ${WARP10_CONFIG} >> ${WARP10_HOME}/logs/warp10.log 2>&1 &
-
-  echo $! > ${PID_FILE}
-
-  if [ ! -e ${PID_FILE} ] || [ "`${JAVA_HOME}/bin/jps -lm|grep -wE $(cat ${PID_FILE})|cut -f 1 -d' '`" = "" ]; then
-    echo "Start failed! - See warp10.log for more details"
-    exit 1
-  fi
-
   echo '  ___       __                           ____________   '
   echo '  __ |     / /_____ _______________      __<  /_  __ \  '
   echo '  __ | /| / /_  __ `/_  ___/__  __ \     __  /_  / / /  '
@@ -502,6 +488,8 @@ start() {
     rm -f ${FIRSTINIT_FILE}
 
   fi
+
+  ${JAVA_HOME}/bin/java ${JAVA_OPTS} -cp ${WARP10_CP} ${WARP10_CLASS} ${WARP10_CONFIG}
 }
 
 stop() {
@@ -509,48 +497,37 @@ stop() {
   #
   # Make sure the caller is warp10
   #
+  PID=$1
 
   if [ "`whoami`" != "${WARP10_USER}" ]
   then
     echo "You must be ${WARP10_USER} to run this script."
     exit 1
   fi
-
-  echo "Stop Warp 10..."
-  if [ -e ${PID_FILE} ] && [ "`${JAVA_HOME}/bin/jps -lm|grep -wE $(cat ${PID_FILE})|cut -f 1 -d' '`" != "" ]
+  echo "Stop Warp 10 with pid ${PID}"
+  if [ "$PID" != "" ]
   then
-    kill `${JAVA_HOME}/bin/jps -lm|grep -wE $(cat ${PID_FILE})|cut -f 1 -d' '`
-    rm -f ${PID_FILE}
+    kill ${PID}
   else
     echo "No instance of Warp 10 is currently running"
   fi
 }
 
 status() {
-  
-  #
-  # Make sure the caller is warp10
-  #
 
-  if [ "`whoami`" != "${WARP10_USER}" ]
-  then
-    echo "You must be ${WARP10_USER} to run this script."
-    exit 1
-  fi
-  if [ -e ${PID_FILE} ]
-  then
-    ${JAVA_HOME}/bin/jps -lm|grep -wE $(cat ${PID_FILE})
-  fi
+  echo "Use systemctl status"
+  exit 0
 }
 
 snapshot() {
   if [ $# -ne 2 ]; then
-    echo $"Usage: $0 {snapshot 'snapshot_name'}"
+    echo $"Usage: $0 {snapshot 'snapshot_name' 'pid'}"
     exit 2
   fi
   # Name of snapshot
   SNAPSHOT=$2
-  ${WARP10_HOME}/bin/snapshot.sh ${SNAPSHOT} "${WARP10_HOME}" "${LEVELDB_HOME}" "${PID_FILE}"
+  PID=$3
+  ${WARP10_HOME}/bin/snapshot.sh ${SNAPSHOT} "${WARP10_HOME}" "${LEVELDB_HOME}" "${PID}"
 }
 
 worfcli() {
@@ -606,7 +583,7 @@ case "$1" in
   start
   ;;
   stop)
-  stop
+  stop $2
   ;;
   status)
   status

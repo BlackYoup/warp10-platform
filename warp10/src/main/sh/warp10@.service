@@ -1,0 +1,13 @@
+[Unit]
+Description=Warp 10 Standalone
+
+[Service]
+Environment=WARP10_VERSION=%i
+User=warp10
+ExecStart=/opt/warp10-%i/bin/warp10-standalone.sh start
+ExecStop=/opt/warp10-%i/bin/warp10-standalone.sh stop $MAINPID
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
